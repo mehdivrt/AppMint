@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site en APK</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --text: #1c1f26; --muted: #6b7280;
+    --line: #d9dde3; --accent: #1e6fe8; --accent-text: #ffffff; --danger: #c62828; --ok: #1b7f3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14161a; --card: #1e2127; --text: #eceef2; --muted: #9aa1ad; --line: #343944;
+            --accent: #4c8dff; --danger: #ff6b6b; --ok: #4cd37b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .grid { grid-template-columns: 1fr 230px; align-items: start; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  label { display: block; font-weight: 600; font-size: .92rem; margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  .hint { font-weight: 400; color: var(--muted); font-size: .82rem; }
+  input[type=text], input[type=url], input[type=number], input[type=password], select {
+    width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: transparent; color: var(--text); font: inherit; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .color { display: flex; gap: 8px; align-items: center; }
+  .color input[type=color] { width: 46px; height: 42px; padding: 2px; border: 1px solid var(--line);
+                              border-radius: 10px; background: transparent; }
+  .color input[type=text] { flex: 1; }
+  .icon-pick { display: flex; gap: 14px; align-items: center; }
+  .icon-box { width: 84px; height: 84px; border-radius: 20px; border: 2px dashed var(--line);
+              display: grid; place-items: center; overflow: hidden; flex: none; color: var(--muted);
+              font-size: .75rem; text-align: center; }
+  .icon-box img { width: 100%; height: 100%; object-fit: cover; }
+  .btn { display: inline-block; padding: 11px 18px; border-radius: 10px; border: 1px solid var(--line);
+         background: transparent; color: var(--text); font: inherit; cursor: pointer; }
+  .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent);
+                 font-weight: 600; width: 100%; margin-top: 18px; padding: 14px; font-size: 1.05rem; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .check { display: flex; gap: 10px; align-items: center; margin: 10px 0 0; font-weight: 400; }
+  .check input { width: 20px; height: 20px; }
+  details { margin-top: 16px; }
+  summary { cursor: pointer; font-weight: 600; }
+  /* aperçu téléphone */
+  .phone { width: 190px; margin: 0 auto; border: 6px solid #222; border-radius: 28px; overflow: hidden;
+           background: #fff; aspect-ratio: 9 / 18; display: flex; flex-direction: column; }
+  .phone .status { height: 22px; background: #1e88e5; transition: background .2s; }
+  .phone .screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                   gap: 10px; background: #fff; transition: background .2s; padding: 10px; text-align: center; }
+  .phone .screen img { width: 64px; height: 64px; border-radius: 15px; object-fit: cover; }
+  .phone .screen .ph { width: 64px; height: 64px; border-radius: 15px; background: #1e88e5; color: #fff;
+                       font: 700 30px/64px system-ui; text-align: center; }
+  .phone .screen b { font-size: .8rem; color: #222; word-break: break-word; }
+  .caption { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 8px; }
+  #result { margin-top: 16px; display: none; }
+  .state { font-weight: 600; }
+  .state.ok { color: var(--ok); } .state.err { color: var(--danger); }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 10px 0; }
+  .bar i { display: block; height: 100%; width: 40%; background: var(--accent); animation: slide 1.2s infinite ease-in-out; }
+  @keyframes slide { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
+  pre { white-space: pre-wrap; word-break: break-word; font-size: .75rem; max-height: 220px; overflow: auto;
+        background: var(--bg); padding: 10px; border-radius: 8px; }
+  .err-text { color: var(--danger); font-size: .9rem; margin-top: 10px; white-space: pre-line; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Transforme ton site en application Android</h1>
+  <p class="sub">Remplis les informations, puis télécharge ton APK.</p>
+
+  <form id="form" class="grid" novalidate>
+    <div class="card">
+      <label for="url">Adresse du site <span class="hint">(obligatoire)</span></label>
+      <input id="url" type="url" inputmode="url" placeholder="https://monsite.com" required autocomplete="off">
+
+      <label for="name">Nom de l'application <span class="hint">(obligatoire, 30 caractères max)</span></label>
+      <input id="name" type="text" maxlength="30" placeholder="Mon App" required>
+
+      <label>Icône <span class="hint">(PNG, JPG ou WebP, 96×96 px minimum, carrée de préférence)</span></label>
+      <div class="icon-pick">
+        <div class="icon-box" id="iconBox">Aucune<br>icône</div>
+        <div>
+          <input id="iconFile" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+          <button type="button" class="btn" id="iconBtn">Choisir une image</button>
+          <button type="button" class="btn" id="iconClear" hidden>Retirer</button>
+          <div class="hint" style="margin-top:6px">Sans icône, une icône avec la première lettre du nom est créée.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="themeColor">Couleur principale <span class="hint">(barre d'état)</span></label>
+          <div class="color"><input id="themeColorPick" type="color" value="#1e88e5"><input id="themeColor" type="text" value="#1E88E5" maxlength="7"></div>
+        </div>
+        <div>
+          <label for="splashColor">Couleur de fond <span class="hint">(démarrage)</span></label>
+          <div class="color"><input id="splashColorPick" type="color" value="#ffffff"><input id="splashColor" type="text" value="#FFFFFF" maxlength="7"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="orientation">Orientation</label>
+          <select id="orientation">
+            <option value="auto">Automatique</option>
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Paysage</option>
+          </select>
+        </div>
+        <div>
+          <label for="language">Langue de l'app</label>
+          <select id="language">
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="check"><input id="pullToRefresh" type="checkbox" checked> Tirer vers le bas pour actualiser</label>
+      <label class="check"><input id="externalLinksInBrowser" type="checkbox" checked> Ouvrir les liens externes dans le navigateur</label>
+      <label class="check"><input id="allowZoom" type="checkbox"> Autoriser le zoom</label>
+
+      <details>
+        <summary>Options avancées</summary>
+        <label for="packageName">Nom du package <span class="hint">(laisse vide pour le générer automatiquement)</span></label>
+        <input id="packageName" type="text" placeholder="com.monsite.app" autocapitalize="none" autocomplete="off">
+        <div class="row">
+          <div>
+            <label for="versionName">Version</label>
+            <input id="versionName" type="text" value="1.0">
+          </div>
+          <div>
+            <label for="versionCode">Numéro de build</label>
+            <input id="versionCode" type="number" min="1" value="1">
+          </div>
+        </div>
+        <div class="hint" style="margin-top:6px">Pour une mise à jour : garde le même package et augmente le numéro de build.</div>
+        <label for="apiKey">Clé API du serveur</label>
+        <input id="apiKey" type="password" autocomplete="off" placeholder="Si le serveur en demande une">
+      </details>
+
+      <button class="btn primary" id="submit" type="submit">Créer mon APK</button>
+      <div class="err-text" id="formError" role="alert"></div>
+
+      <div id="result" class="card">
+        <div class="state" id="state"></div>
+        <div class="bar" id="bar"><i></i></div>
+        <div id="resultBody"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="phone" aria-hidden="true">
+        <div class="status" id="pvStatus"></div>
+        <div class="screen" id="pvScreen">
+          <div class="ph" id="pvLetter">A</div>
+          <img id="pvIcon" alt="" hidden>
+          <b id="pvName">Mon App</b>
+        </div>
+      </div>
+      <div class="caption">Aperçu de l'écran de démarrage</div>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var iconData = '';       // base64 PNG sans préfixe
+  var pollTimer = null;
+
+  // ---- mémoriser la clé API (facultatif) ----
+  try { $('apiKey').value = localStorage.getItem('appmintKey') || ''; } catch (e) {}
+
+  // ---- couleurs : sélecteur <-> champ texte ----
+  function bindColor(key) {
+    var pick = $(key + 'Pick'), txt = $(key);
+    pick.addEventListener('input', function () { txt.value = pick.value.toUpperCase(); preview(); });
+    txt.addEventListener('input', function () {
+      if (/^#[0-9a-fA-F]{6}$/.test(txt.value)) pick.value = txt.value;
+      preview();
+    });
+  }
+  bindColor('themeColor');
+  bindColor('splashColor');
+
+  // ---- aperçu ----
+  function preview() {
+    var theme = /^#[0-9a-fA-F]{6}$/.test($('themeColor').value) ? $('themeColor').value : '#1e88e5';
+    var splash = /^#[0-9a-fA-F]{6}$/.test($('splashColor').value) ? $('splashColor').value : '#ffffff';
+    var name = $('name').value.trim() || 'Mon App';
+    $('pvStatus').style.background = theme;
+    $('pvScreen').style.background = splash;
+    $('pvName').textContent = name;
+    var letter = $('pvLetter');
+    letter.textContent = name.charAt(0).toUpperCase();
+    letter.style.background = theme;
+    letter.hidden = !!iconData;
+    $('pvIcon').hidden = !iconData;
+  }
+  $('name').addEventListener('input', preview);
+
+  // ---- icône : recadrage carré 512×512 côté navigateur ----
+  $('iconBtn').addEventListener('click', function () { $('iconFile').click(); });
+  $('iconClear').addEventListener('click', function () {
+    iconData = ''; $('iconFile').value = '';
+    $('iconBox').innerHTML = 'Aucune<br>icône';
+    $('iconClear').hidden = true; $('pvIcon').removeAttribute('src');
+    preview();
+  });
+  $('iconFile').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    if (!file) return;
+    $('formError').textContent = '';
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      if (img.naturalWidth < 96 || img.naturalHeight < 96) {
+        $('formError').textContent = "L'icône doit faire au moins 96×96 pixels.";
+        return;
+      }
+      var size = 512, c = document.createElement('canvas');
+      c.width = c.height = size;
+      var side = Math.min(img.naturalWidth, img.naturalHeight);
+      var sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+      c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      var dataUrl = c.toDataURL('image/png');
+      iconData = dataUrl.split(',')[1];
+      $('iconBox').innerHTML = '';
+      var im = document.createElement('img'); im.src = dataUrl; im.alt = '';
+      $('iconBox').appendChild(im);
+      $('pvIcon').src = dataUrl;
+      $('iconClear').hidden = false;
+      preview();
+    };
+    img.onerror = function () {
+      URL.revokeObjectURL(url);
+      $('formError').textContent = "Image illisible. Utilise un PNG, JPG ou WebP.";
+    };
+    img.src = url;
+  });
+
+  // ---- envoi ----
+  function showError(msg) { $('formError').textContent = msg; }
+
+  $('form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    showError('');
+    var url = $('url').value.trim();
+    if (url && !/^https?:\/\//i.test(url)) { url = 'https://' + url; $('url').value = url; }
+    var name = $('name').value.trim();
+    if (!url) return showError("Indique l'adresse de ton site.");
+    if (!name) return showError("Indique le nom de l'application.");
+
+    var body = {
+      url: url, name: name,
+      themeColor: $('themeColor').value, splashColor: $('splashColor').value,
+      orientation: $('orientation').value, language: $('language').value,
+      pullToRefresh: $('pullToRefresh').checked,
+      externalLinksInBrowser: $('externalLinksInBrowser').checked,
+      allowZoom: $('allowZoom').checked,
+      versionName: $('versionName').value.trim() || '1.0',
+      versionCode: Number($('versionCode').value) || 1
+    };
+    var pkg = $('packageName').value.trim();
+    if (pkg) body.packageName = pkg;
+    if (iconData) body.icon = iconData;
+
+    var key = $('apiKey').value;
+    try { localStorage.setItem('appmintKey', key); } catch (e) {}
+    var headers = { 'content-type': 'application/json' };
+    if (key) headers['x-api-key'] = key;
+
+    $('submit').disabled = true;
+    fetch('/api/builds', { method: 'POST', headers: headers, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          var d = res.j.details ? '\n' + res.j.details.join('\n') : '';
+          throw new Error((res.j.error || 'Erreur') + d);
+        }
+        track(res.j.id);
+      })
+      .catch(function (e) {
+        $('submit').disabled = false;
+        showError(e.message || 'Impossible de joindre le serveur.');
+      });
+  });
+
+  // ---- suivi du build ----
+  function track(id) {
+    $('result').style.display = 'block';
+    $('bar').style.display = 'block';
+    $('state').className = 'state';
+    $('resultBody').textContent = '';
+    $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    clearInterval(pollTimer);
+    var fails = 0;
+    function tick() {
+      fetch('/api/builds/' + id)
+        .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+        .then(function (b) {
+          fails = 0;
+          if (b.status === 'queued') {
+            $('state').textContent = 'En attente' + (b.queuePosition ? ' (position ' + b.queuePosition + ')' : '') + '…';
+          } else if (b.status === 'building') {
+            $('state').textContent = 'Compilation en cours (1 à 3 minutes)…';
+          } else if (b.status === 'done') {
+            finish(true, b);
+          } else {
+            finish(false, b);
+          }
+        })
+        .catch(function () {
+          if (++fails >= 5) { clearInterval(pollTimer); finish(false, { error: 'Connexion au serveur perdue.' }); }
+        });
+    }
+    tick();
+    pollTimer = setInterval(tick, 3000);
+  }
+
+  function finish(ok, b) {
+    clearInterval(pollTimer);
+    $('submit').disabled = false;
+    $('bar').style.display = 'none';
+    var out = $('resultBody');
+    out.textContent = '';
+    if (ok && b.downloadUrl) {
+      $('state').className = 'state ok';
+      $('state').textContent = 'Ton APK est prêt.';
+      var a = document.createElement('a');
+      a.className = 'btn primary'; a.href = b.downloadUrl; a.textContent = "Télécharger l'APK";
+      a.style.textAlign = 'center'; a.style.textDecoration = 'none';
+      out.appendChild(a);
+      var p = document.createElement('p');
+      p.className = 'hint';
+      p.textContent = "Package : " + b.packageName + " · version " + b.versionName + " (" + b.versionCode + "). "
+        + "Sur le téléphone, autorise l'installation d'applications de sources inconnues. Le lien reste valable 24 h.";
+      out.appendChild(p);
+    } else if (ok) {
+      $('state').className = 'state ok';
+      $('state').textContent = 'Projet généré (mode simulation, pas d\'APK).';
+    } else {
+      $('state').className = 'state err';
+      $('state').textContent = 'La compilation a échoué.';
+      var m = document.createElement('div');
+      m.className = 'err-text'; m.textContent = b.error || '';
+      out.appendChild(m);
+      if (b.log) {
+        var d = document.createElement('details');
+        var s = document.createElement('summary'); s.textContent = 'Voir le journal';
+        var pre = document.createElement('pre'); pre.textContent = b.log;
+        d.appendChild(s); d.appendChild(pre); out.appendChild(d);
+      }
+    }
+  }
+
+  preview();
+})();
+</script>
+</body>
+</html>

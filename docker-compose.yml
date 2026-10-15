@@ -1,0 +1,15 @@
+services:
+  appmint:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      API_KEY: "${API_KEY:?Définissez API_KEY dans un fichier .env}"
+      TRUST_PROXY: "0"
+    volumes:
+      - appmint-data:/data
+    restart: unless-stopped
+    mem_limit: 3g
+
+volumes:
+  appmint-data:

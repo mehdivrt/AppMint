@@ -1,0 +1,98 @@
+name: Créer un APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Adresse du site (https://...)"
+        required: true
+      name:
+        description: "Nom de l'application"
+        required: true
+      icon_path:
+        description: "Chemin de l'icône dans le dépôt (ex. icon.png), facultatif"
+        required: false
+      theme_color:
+        description: "Couleur principale #RRGGBB"
+        required: false
+        default: "#1E88E5"
+      splash_color:
+        description: "Couleur de fond au démarrage #RRGGBB"
+        required: false
+        default: "#FFFFFF"
+      package_name:
+        description: "Package (ex. com.monsite.app), facultatif"
+        required: false
+      version_name:
+        description: "Version"
+        required: false
+        default: "1.0"
+      version_code:
+        description: "Numéro de build (à augmenter à chaque mise à jour)"
+        required: false
+        default: "1"
+      orientation:
+        description: "auto, portrait ou landscape"
+        required: false
+        default: "auto"
+      language:
+        description: "fr, en ou ar"
+        required: false
+        default: "fr"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+
+      - name: Installer les dépendances
+        run: npm install --omit=dev --no-audit --no-fund
+
+      - name: Clé de signature (si fournie dans les secrets)
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASS }}
+        run: |
+          mkdir -p data
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASS" ]; then
+            echo "$KS_B64" | base64 -d > data/release.keystore
+            printf '%s' "$KS_PASS" > data/release.keystore.pass
+            echo "Clé de signature existante utilisée."
+          else
+            echo "::warning::Aucune clé fournie : une clé temporaire est créée, les mises à jour de l'app ne seront pas possibles."
+          fi
+
+      - name: Compiler l'APK
+        env:
+          APP_URL: ${{ inputs.url }}
+          APP_NAME: ${{ inputs.name }}
+          ICON_PATH: ${{ inputs.icon_path }}
+          THEME_COLOR: ${{ inputs.theme_color }}
+          SPLASH_COLOR: ${{ inputs.splash_color }}
+          PACKAGE_NAME: ${{ inputs.package_name }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          ORIENTATION: ${{ inputs.orientation }}
+          LANGUAGE: ${{ inputs.language }}
+        run: node build-cli.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: out/*.apk
+          if-no-files-found: error

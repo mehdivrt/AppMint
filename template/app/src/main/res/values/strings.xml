@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">{{APP_NAME}}</string>
+    <string name="start_url">{{START_URL}}</string>
+    <string name="offline_title">{{OFFLINE_TITLE}}</string>
+    <string name="offline_text">{{OFFLINE_TEXT}}</string>
+    <string name="offline_retry">{{OFFLINE_RETRY}}</string>
+    <bool name="pull_to_refresh">{{PULL_TO_REFRESH}}</bool>
+    <bool name="external_links_in_browser">{{EXTERNAL_LINKS}}</bool>
+    <bool name="allow_zoom">{{ALLOW_ZOOM}}</bool>
+    <string name="user_agent_suffix">{{UA_SUFFIX}}</string>
+</resources>
